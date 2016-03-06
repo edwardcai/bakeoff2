@@ -1,5 +1,6 @@
 import java.util.Arrays;
 import java.util.Collections;
+import android.graphics.Rect;
 
 String[] phrases; //contains all of the phrases
 int totalTrialNum = 4; //the total number of phrases to be tested - set this low for testing. Might be ~10 for the real bakeoff!
@@ -13,25 +14,60 @@ float errorsTotal = 0; //a running total of the number of errors (when hitting n
 String currentPhrase = ""; //the current target phrase
 String currentTyped = ""; //what the user has typed so far
 final int DPIofYourDeviceScreen = 480; //you will need to look up the DPI or PPI of your device to make sure you get the right scale!!
-                                      //http://en.wikipedia.org/wiki/List_of_displays_by_pixel_density
-final float sizeOfInputArea = DPIofYourDeviceScreen*1; //aka, 1.0 inches square!
+//http://en.wikipedia.org/wiki/List_of_displays_by_pixel_density
+final int sizeOfInputArea = DPIofYourDeviceScreen*1; //aka, 1.0 inches square!
+final int tw = sizeOfInputArea/12; //Used because fractions confuse me
+final int margin = 200;
 
-//Variables for my silly implementation. You can delete this:
-String letter0 = "a";
-String letter1 = "b";
-String letter2 = "c";
-String letter3 = "d";
+int scrollLoc = 0;
+Rect input = new Rect(margin, margin, margin + tw*12, margin + tw*12);
+Rect delete = new Rect(margin, margin, margin + tw*6, margin + tw * 2);
+Rect space = new Rect(margin + tw * 6, margin, margin + tw * 12, margin + tw * 2);
 
+Rect[] rects = new Rect[4];
+Rect scroll = new Rect(margin, margin + tw*6, margin + tw*12, margin + tw*8);
+
+Rect auto0 = new Rect(margin, margin + tw*8, margin + tw*6, margin + tw*10);
+Rect auto1 = new Rect(margin + tw*6, margin + tw*8, margin + tw*12, margin +tw*10);
+Rect auto2 = new Rect(margin, margin + tw*10, margin + tw * 6, margin + tw*12);
+Rect auto3 = new Rect(margin + tw*6, margin + tw*10, margin + tw*6, margin + tw*12);
+
+char[] letters = {'a', 'b', 'c', 'd'};
 //You can modify anything in here. This is just a basic implementation.
 void setup()
 {
+  for (int i = 0; i < 4; i++) {
+    rects[i] = new Rect(margin + (tw*3)*i, margin + (tw*2), margin + ((tw*3) * (i+1)), margin + tw*6);
+  }
+
   phrases = loadStrings("phrases2.txt"); //load the phrase set into memory
   Collections.shuffle(Arrays.asList(phrases)); //randomize the order of the phrases
-    
+
   orientation(PORTRAIT); //can also be LANDSCAPE -- sets orientation on android device
-  size(1000, 1000); //Sets the size of the app. You may want to modify this to your device. Many phones today are 1080 wide by 1920 tall.
+  size(1080, 1920); //Sets the size of the app. You may want to modify this to your device. Many phones today are 1080 wide by 1920 tall.
   textFont(createFont("Arial", 24)); //set the font to arial 24
   noStroke(); //my code doesn't use any strokes.
+}
+
+void drawRect(Rect r, int hex) {
+  fill(hex);
+  stroke(0);
+  rect((float)r.left, (float)r.top, (float)r.width(), (float)r.height());
+}
+
+void drawRect(Rect r, int hex, String input) {
+  drawRect(r, hex);
+  fill(0);
+  text(input, (float)r.centerX(), (float)r.centerY()+15); //
+}
+
+void drawScroll(Rect r, int hex) {
+  drawRect(r, hex);
+  for (int i = 0; i < 7; i++) {
+    fill(#808080);
+    if (i == scrollLoc) fill(#FF0000); 
+    ellipse((float)r.left+(tw*12/7) * i + 40, (float)r.centerY(), 20, 20);
+  }
 }
 
 //You can modify anything in here. This is just a basic implementation.
@@ -39,9 +75,8 @@ void draw()
 {
   background(0); //clear background
 
- // image(watch,-200,200);
-  fill(100);
-  rect(200, 200, sizeOfInputArea, sizeOfInputArea); //input area should be 2" by 2"
+  // image(watch,-200,200);
+  drawRect(input, #808080); //input area should be 2" by 2"
 
   if (finishTime!=0)
   {
@@ -65,7 +100,6 @@ void draw()
 
   if (startTime!=0)
   {
-    textSize(70);
     //you will need something like the next 10 lines in your code. Output does not have to be within the 2 inch area!
     textAlign(LEFT); //align the text left
     fill(128);
@@ -80,17 +114,25 @@ void draw()
 
 
     //my draw code
+
+    textSize(70);
     textAlign(CENTER);
-    text(letter0, 200+sizeOfInputArea/2-180, 200+sizeOfInputArea/3); //
-    text(letter1, 200+sizeOfInputArea/2-60, 200+sizeOfInputArea/3); //
-    text(letter2, 200+sizeOfInputArea/2+60, 200+sizeOfInputArea/3); //
-    text(letter3, 200+sizeOfInputArea/2+180, 200+sizeOfInputArea/3); //draw current letter
+    //Draw letters
+    for (int i = 0; i < 4; i++) {
+      drawRect(rects[i], #FFFFFF, ""+letters[i]);
+    }
+
+    //Draw space and delete
+    drawRect(delete, #FFFFFF, "del");
+    drawRect(space, #FFFFFF, "_");
+    textSize(30);
+    //Draw scroll bar
+    drawScroll(scroll, #FFFFFF);
     fill(255, 0, 0);
-    rect(200, 200, sizeOfInputArea/2, sizeOfInputArea/2); //draw left red button
+    //rect(200, 200, sizeOfInputArea/2, sizeOfInputArea/2); //draw left red button
     fill(0, 255, 0);
-    rect(200+sizeOfInputArea/2, 200, sizeOfInputArea/2, sizeOfInputArea/2); //draw right green button
+    //rect(200+sizeOfInputArea/2, 200, sizeOfInputArea/2, sizeOfInputArea/2); //draw right green button
   }
-  
 }
 
 boolean didMouseClick(float x, float y, float w, float h) //simple function to do hit testing
@@ -101,46 +143,23 @@ boolean didMouseClick(float x, float y, float w, float h) //simple function to d
 
 void mousePressed()
 {
-  /*
-   if (mouseX > 200+sizeOfInputArea/2) //check if click in left button
-  {
-    letter0 = String.valueOf((char)(letter0.charAt(0) + 4));
-    letter1 = String.valueOf((char)(letter1.charAt(0) + 4));
-    letter2 = String.valueOf((char)(letter2.charAt(0) + 4));
-    letter3 = String.valueOf((char)(letter3.charAt(0) + 4));
+  for (int i = 0; i < 4; i++) {
+    if (rects[i].contains(mouseX, mouseY)) currentTyped += letters[i];
+  }
+  if (space.contains(mouseX, mouseY)) {
+    currentTyped+=" ";
+  }
+  if (delete.contains(mouseX, mouseY)) {
+    currentTyped = currentTyped.substring(0, currentTyped.length()-1);
   }
 
-  if (mouseX < 200+sizeOfInputArea/2+80) //check if click in right button
-  {
-    letter0 = String.valueOf((char)(letter0.charAt(0) - 4));
-    letter1 = String.valueOf((char)(letter1.charAt(0) - 4));
-    letter2 = String.valueOf((char)(letter2.charAt(0) - 4));
-    letter3 = String.valueOf((char)(letter3.charAt(0) - 4));
-  }
-  */
-  
-  if (didMouseClick(200, 200, sizeOfInputArea, sizeOfInputArea/2)) //check if click occured in letter area
-  {
-    if (mouseX > 200 && mouseX < 200 + (sizeOfInputArea / 4)) {
-      currentTyped += letter0; 
-    }
-    if (mouseX > 200 + (sizeOfInputArea / 4) && mouseX < 200 + 2 * (sizeOfInputArea / 4)) {
-      currentTyped += letter1; 
-    }
-    if (mouseX > 200 + 2 * (sizeOfInputArea / 4)&& mouseX < 200 + 3 *(sizeOfInputArea / 4)) {
-      currentTyped += letter2; 
-    }
-    if (mouseX > 200 + 3 * (sizeOfInputArea / 4) && mouseX < 200 + 4*(sizeOfInputArea / 4)) {
-      currentTyped += letter3; 
-    }
-    /*
-    if (letter1=="_") //if underscore, consider that a space bar
-      currentTyped+=" ";
-    else if (letter1=='`' & currentTyped.length()>0) //if `, treat that as a delete command
-      //currentTyped = currentTyped.substring(0, currentTyped.length()-1);
-    else if (letter1!='`') //if not any of the above cases, add the current letter to the typed string
-      currentTyped+=letter1;*/
-  }
+  /*
+  if (letter1=="_") //if underscore, consider that a space bar
+   
+   else if (letter1=='`' & currentTyped.length()>0) //if `, treat that as a delete command
+   //currentTyped = currentTyped.substring(0, currentTyped.length()-1);
+   else if (letter1!='`') //if not any of the above cases, add the current letter to the typed string
+   currentTyped+=letter1;*/
 
   //You are allowed to have a next button outside the 2" area
   if (didMouseClick(800, 00, 200, 200)) //check if click is in next button
@@ -153,30 +172,27 @@ int counter = 0;
 
 void mouseDragged() 
 {
-   if (mouseY > sizeOfInputArea/2) //check if click occured in letter area
+  if (input.contains(mouseX, mouseY)) //check if click occured in letter area
   {
-    
-  
-  counter++;
-  if (counter == 7) {
-    counter = 0;
-  if (mouseX > pmouseX) //check if click in left button
-  {
-    letter0 = String.valueOf((char)(letter0.charAt(0) + 1));
-    letter1 = String.valueOf((char)(letter1.charAt(0) + 1));
-    letter2 = String.valueOf((char)(letter2.charAt(0) + 1));
-    letter3 = String.valueOf((char)(letter3.charAt(0) + 1));
-  }
+    counter++;
+    if (counter == 7) {
+      counter = 0;
+      if (mouseX > pmouseX) //check if click in left button
+      {
+        for (int i = 0; i < 4; i++) {
+          letters[i] = (char((((int)letters[i] + 1 - 97) % 26) + 97));
+        }
+      }
 
-  if (mouseX < pmouseX) //check if click in right button
-  {
-    letter0 = String.valueOf((char)(letter0.charAt(0) - 1));
-    letter1 = String.valueOf((char)(letter1.charAt(0) - 1));
-    letter2 = String.valueOf((char)(letter2.charAt(0) - 1));
-    letter3 = String.valueOf((char)(letter3.charAt(0) - 1));
+      if (mouseX < pmouseX) //check if click in right button
+      {
+        for (int i = 0; i < 4; i++) {
+          letters[i] = (char((((int)letters[i] - 1 - 97 + 26) % 26) + 97));
+        }
+      }
+    }
   }
-  }
-  }
+  scrollLoc = (((int)letters[0] - 97) % 26) / 4;
 }
 
 
@@ -186,7 +202,7 @@ void nextTrial()
   if (currTrialNum >= totalTrialNum) //check to see if experiment is done
     return; //if so, just return
 
-    if (startTime!=0 && finishTime==0) //in the middle of trials
+  if (startTime!=0 && finishTime==0) //in the middle of trials
   {
     System.out.println("==================");
     System.out.println("Phrase " + (currTrialNum+1) + " of " + totalTrialNum); //output
@@ -222,8 +238,7 @@ void nextTrial()
   {
     System.out.println("Trials beginning! Starting timer..."); //output we're done
     startTime = millis(); //start the timer!
-  }
-  else
+  } else
   {
     currTrialNum++; //increment trial number
   }
