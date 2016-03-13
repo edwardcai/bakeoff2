@@ -1,6 +1,7 @@
 import java.util.Arrays;
 import java.util.Collections;
 import android.graphics.Rect;
+import android.graphics.Point;
 
 String[] phrases; //contains all of the phrases
 int totalTrialNum = 4; //the total number of phrases to be tested - set this low for testing. Might be ~10 for the real bakeoff!
@@ -20,11 +21,12 @@ final int tw = sizeOfInputArea/12; //Used because fractions confuse me
 final int margin = 200;
 
 int scrollLoc = 0;
-Rect input = new Rect(margin, margin, margin + tw*12, margin + tw*12);
-Rect delete = new Rect(margin, margin, margin + tw*6, margin + tw * 2);
-Rect space = new Rect(margin + tw * 6, margin, margin + tw * 12, margin + tw * 2);
 
-Rect[] rects = new Rect[4];
+Rect input = new Rect(margin, margin, margin + tw*12, margin + tw*12);
+Rect delete = new Rect(margin+tw, margin+tw, margin + tw*6, margin + tw * 3);
+Rect space = new Rect(margin + tw * 6, margin+tw, margin + tw * 11, margin + tw * 3);
+
+Rect[] rects = new Rect[2];
 Rect scroll = new Rect(margin, margin + tw*6, margin + tw*12, margin + tw*8);
 
 Rect auto0 = new Rect(margin, margin + tw*8, margin + tw*6, margin + tw*10);
@@ -32,13 +34,52 @@ Rect auto1 = new Rect(margin + tw*6, margin + tw*8, margin + tw*12, margin +tw*1
 Rect auto2 = new Rect(margin, margin + tw*10, margin + tw * 6, margin + tw*12);
 Rect auto3 = new Rect(margin + tw*6, margin + tw*10, margin + tw*6, margin + tw*12);
 
-char[] letters = {'a', 'b', 'c', 'd'};
+Point[] points = new Point[48];
+
+Point sMouse = new Point();
+Point fMouse = new Point();
+boolean inSwipe = false;
+
+char[][] baseLetters = { 
+                        {'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x'},
+                        {'y','z','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0','\0'}
+                       };
+char[] letters = baseLetters[0];
 //You can modify anything in here. This is just a basic implementation.
 void setup()
 {
-  for (int i = 0; i < 4; i++) {
-    rects[i] = new Rect(margin + (tw*3)*i, margin + (tw*2), margin + ((tw*3) * (i+1)), margin + tw*6);
+  for (int i = 0; i < 2; i++) {
+    rects[i] = new Rect(margin + tw + (tw*5)*(i%2), margin + tw + (tw*2)*(1+(i/2)), margin + tw + (tw*5)*(1 + (i%2)), margin + tw + (tw*2)*(2+(i/2)));
   }
+  
+  points[0] = new Point(margin+tw*0, margin+tw*0); points[1] = new Point(margin+tw*2, margin+tw*0);
+  points[2] = new Point(margin+tw*2, margin+tw*0); points[3] = new Point(margin+tw*4, margin+tw*0);
+  points[4] = new Point(margin+tw*4, margin+tw*0); points[5] = new Point(margin+tw*6, margin+tw*0);
+  points[6] = new Point(margin+tw*6, margin+tw*0); points[7] = new Point(margin+tw*8, margin+tw*0);
+  points[8] = new Point(margin+tw*8, margin+tw*0); points[9] = new Point(margin+tw*10, margin+tw*0);
+  points[10] = new Point(margin+tw*10, margin+tw*0); points[11] = new Point(margin+tw*12, margin+tw*0);
+  
+  points[12] = new Point(margin+tw*12, margin+tw*0); points[13]  = new Point(margin+tw*12, margin+tw*2);
+  points[14] = new Point(margin+tw*12, margin+tw*2); points[15] = new Point(margin+tw*12, margin+tw*4);
+  points[16] = new Point(margin+tw*12, margin+tw*4); points[17] = new Point(margin+tw*12, margin+tw*6);
+  points[18] = new Point(margin+tw*12, margin+tw*6); points[19] = new Point(margin+tw*12, margin+tw*8);
+  points[20] = new Point(margin+tw*12, margin+tw*8); points[21] = new Point(margin+tw*12, margin+tw*10);
+  points[22] = new Point(margin+tw*12, margin+tw*10); points[23] = new Point(margin+tw*12, margin+tw*12);
+  
+  points[24] = new Point(margin+tw*12, margin+tw*12); points[25] = new Point(margin+tw*10, margin+tw*12);
+  points[26] = new Point(margin+tw*10, margin+tw*12); points[27] = new Point(margin+tw*8, margin+tw*12);
+  points[28] = new Point(margin+tw*8, margin+tw*12); points[29] = new Point(margin+tw*6, margin+tw*12);
+  points[30] = new Point(margin+tw*6, margin+tw*12); points[31] = new Point(margin+tw*4, margin+tw*12);
+  points[32] = new Point(margin+tw*4, margin+tw*12); points[33] = new Point(margin+tw*2, margin+tw*12);
+  points[34] = new Point(margin+tw*2, margin+tw*12); points[35] = new Point(margin+tw*0, margin+tw*12);
+  
+  points[36] = new Point(margin+tw*0, margin+tw*12); points[37] = new Point(margin+tw*0, margin+tw*10);
+  points[38] = new Point(margin+tw*0, margin+tw*10); points[39] = new Point(margin+tw*0, margin+tw*8);
+  points[40] = new Point(margin+tw*0, margin+tw*8); points[41] = new Point(margin+tw*0, margin+tw*6);
+  points[42] = new Point(margin+tw*0, margin+tw*6); points[43] = new Point(margin+tw*0, margin+tw*4);
+  points[44] = new Point(margin+tw*0, margin+tw*4); points[45] = new Point(margin+tw*0, margin+tw*2);
+  points[46] = new Point(margin+tw*0, margin+tw*2); points[47] = new Point(margin+tw*0, margin+tw*0);
+
 
   phrases = loadStrings("phrases2.txt"); //load the phrase set into memory
   Collections.shuffle(Arrays.asList(phrases)); //randomize the order of the phrases
@@ -58,7 +99,7 @@ void drawRect(Rect r, int hex) {
 void drawRect(Rect r, int hex, String input) {
   drawRect(r, hex);
   fill(0);
-  text(input, (float)r.centerX(), (float)r.centerY()+15); //
+  text(input, (float)r.centerX(), (float)r.centerY()+15); 
 }
 
 void drawScroll(Rect r, int hex) {
@@ -68,6 +109,23 @@ void drawScroll(Rect r, int hex) {
     if (i == scrollLoc) fill(#FF0000); 
     ellipse((float)r.left+(tw*12/7) * i + 40, (float)r.centerY(), 20, 20);
   }
+}
+
+Point midpoint (Point a, Point b) {
+  return new Point((a.x + b.x)/2, (a.y + b.y)/2);
+}
+
+void drawLetters(char[] letters) {
+   for (int i = 0; i < 48; i+=2){
+      Point mid = midpoint(points[i], points[i+1]);
+      int offsetY = 0;
+      int offsetX = 0;
+      if ((i/12) == 0) offsetY = 30;
+      if ((i/12) == 1) offsetX = -15;
+      if ((i/12) == 2) offsetY = -10;
+      if ((i/12) == 3) offsetX = 15;
+      text(""+letters[i/2], mid.x+offsetX, mid.y+offsetY);
+   }
 }
 
 //You can modify anything in here. This is just a basic implementation.
@@ -115,19 +173,23 @@ void draw()
 
     //my draw code
 
-    textSize(70);
+    textSize(50);
     textAlign(CENTER);
     //Draw letters
-    for (int i = 0; i < 4; i++) {
-      drawRect(rects[i], #FFFFFF, ""+letters[i]);
+    for (int i = 0; i < 1; i++) {
+      drawRect(rects[i], #FFFFFF, baseLetters[i][0] + "-" + baseLetters[i][23]);
     }
-
+    drawRect(rects[1], #FFFFFF, baseLetters[1][0] + "-" + baseLetters[1][1]);
+   
+   
     //Draw space and delete
-    drawRect(delete, #FFFFFF, "del");
-    drawRect(space, #FFFFFF, "_");
+    
+    drawRect(space, #FFFFFF, "_"); 
+    drawRect(delete, #FFFFFF, "del"); 
+    drawLetters(letters);
     textSize(30);
     //Draw scroll bar
-    drawScroll(scroll, #FFFFFF);
+    //drawScroll(scroll, #FFFFFF);
     fill(255, 0, 0);
     //rect(200, 200, sizeOfInputArea/2, sizeOfInputArea/2); //draw left red button
     fill(0, 255, 0);
@@ -143,15 +205,10 @@ boolean didMouseClick(float x, float y, float w, float h) //simple function to d
 
 void mousePressed()
 {
-  for (int i = 0; i < 4; i++) {
-    if (rects[i].contains(mouseX, mouseY)) currentTyped += letters[i];
-  }
-  if (space.contains(mouseX, mouseY)) {
-    currentTyped+=" ";
-  }
-  if (delete.contains(mouseX, mouseY)) {
-    currentTyped = currentTyped.substring(0, currentTyped.length()-1);
-  }
+  sMouse.set(mouseX, mouseY);
+  inSwipe = true;
+
+  
 
   /*
   if (letter1=="_") //if underscore, consider that a space bar
@@ -170,8 +227,33 @@ void mousePressed()
 
 int counter = 0;
 
+void mouseReleased() {
+  inSwipe = false; 
+    if (space.contains(mouseX, mouseY)) {
+    currentTyped+=" ";
+  }
+  if (delete.contains(mouseX, mouseY)) {
+    currentTyped = currentTyped.substring(0, currentTyped.length()-1);
+  }
+  for (int i = 0; i < 2; i++) {
+    if (rects[i].contains(mouseX, mouseY)) {
+      letters = baseLetters[i];
+    }
+  }
+}
+
 void mouseDragged() 
 {
+  if (inSwipe && (!input.contains(mouseX, mouseY)) && input.contains(sMouse.x, sMouse.y)){
+    fMouse.set(mouseX, mouseY);
+    for (int i = 0; i < 48; i+=2) {
+      if (linesIntersect(sMouse.x, sMouse.y, fMouse.x, fMouse.y, points[i].x, points[i].y, points[i+1].x, points[i+1].y)) {
+        currentTyped += letters[i/2];
+      }
+    }
+    inSwipe = false;
+  }
+  /*
   if (input.contains(mouseX, mouseY)) //check if click occured in letter area
   {
     counter++;
@@ -193,6 +275,7 @@ void mouseDragged()
     }
   }
   scrollLoc = (((int)letters[0] - 97) % 26) / 4;
+  */
 }
 
 
@@ -248,6 +331,36 @@ void nextTrial()
   currentPhrase = phrases[currTrialNum]; // load the next phrase!
   //currentPhrase = "abc"; // uncomment this to override the test phrase (useful for debugging)
 }
+
+//Test for intersection
+public static boolean linesIntersect(final int X1, final int Y1, final int X2, final int Y2,
+      final int X3, final int Y3, final int X4, final int Y4) {
+    return ((relativeCCW(X1, Y1, X2, Y2, X3, Y3)
+        * relativeCCW(X1, Y1, X2, Y2, X4, Y4) <= 0) && (relativeCCW(X3,
+            Y3, X4, Y4, X1, Y1)
+            * relativeCCW(X3, Y3, X4, Y4, X2, Y2) <= 0));
+}
+
+  private static int relativeCCW(final int X1, final int Y1, int X2, int Y2, int PX,
+      int PY) {
+    X2 -= X1;
+    Y2 -= Y1;
+    PX -= X1;
+    PY -= Y1;
+    int ccw = PX * Y2 - PY * X2;
+    if (ccw == 0) {
+      ccw = PX * X2 + PY * Y2;
+      if (ccw > 0) {
+        PX -= X2;
+        PY -= Y2;
+        ccw = PX * X2 + PY * Y2;
+        if (ccw < 0) {
+          ccw = 0;
+        }
+      }
+    }
+    return (ccw < 0) ? -1 : ((ccw > 0) ? 1 : 0);
+  }
 
 
 
