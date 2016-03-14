@@ -36,6 +36,8 @@ public class Letter{
 }
 
 
+Point circle = new Point(0,0);
+
 Rect[] rects = new Rect[4];
 Rect scroll = new Rect(margin, margin + tw*6, margin + tw*12, margin + tw*8);
 
@@ -196,6 +198,8 @@ void draw()
     fill(0, 255, 0);
     //rect(200+sizeOfInputArea/2, 200, sizeOfInputArea/2, sizeOfInputArea/2); //draw right green button
   }
+  
+  if (inSwipe) ellipse(mouseX, mouseY - tw*4, tw*4, tw*4);
 }
 
 boolean didMouseClick(float x, float y, float w, float h) //simple function to do hit testing
@@ -215,10 +219,8 @@ void mousePressed()
 }
 
 Letter[] top4 = new Letter[4];
-boolean isFull = true;
 void mouseReleased() {
   if (qRect.contains(mouseX, mouseY)) {
-    if (isFull) {
       for (int i = 0; i < letters.length; i++) {
         for (int j = 0; j < letters[i].length; j++) {
           letters[i][j].distance = dist(letters[i][j].p.x, letters[i][j].p.y, mouseX, mouseY);
@@ -231,21 +233,6 @@ void mouseReleased() {
         top4[i].isActive = true;
       }
       minHeap.clear();
-      isFull = false;
-    } else {
-      int index = 0;
-      Letter l = null;
-      float distance = Integer.MAX_VALUE;
-      for (int i = 0; i < 4; i++) {
-        if (dist(top4[i].p.x, top4[i].p.y, mouseX, mouseY) < distance) {
-          distance = dist(top4[i].p.x, top4[i].p.y,mouseX,mouseY);
-          index = i;
-        }
-      }
-      currentTyped += ""+top4[index].l;
-      setQwertyActive(true);
-      isFull = true;
-    }
   }
 }
 
