@@ -3,6 +3,7 @@ import java.util.PriorityQueue;
 import java.util.Collections;
 import android.graphics.Rect;
 import android.graphics.Point;
+import java.util.Comparator;
 
 String[] phrases; //contains all of the phrases
 int totalTrialNum = 4; //the total number of phrases to be tested - set this low for testing. Might be ~10 for the real bakeoff!
@@ -26,6 +27,14 @@ Rect input = new Rect(margin, margin, margin + tw*12, margin + tw*12);
 Rect delete = new Rect(margin, margin, margin + tw*6, margin + tw * 2);
 Rect space = new Rect(margin + tw * 6, margin, margin + tw * 12, margin + tw * 2);
 
+public class Letter{
+  Point p;
+  char l;
+  float distance;
+  boolean isActive;
+  
+}
+
 
 Rect[] rects = new Rect[4];
 Rect scroll = new Rect(margin, margin + tw*6, margin + tw*12, margin + tw*8);
@@ -35,31 +44,45 @@ Rect auto1 = new Rect(margin + tw*6, margin + tw*8, margin + tw*12, margin +tw*1
 Rect auto2 = new Rect(margin, margin + tw*10, margin + tw * 6, margin + tw*12);
 Rect auto3 = new Rect(margin + tw*6, margin + tw*10, margin + tw*6, margin + tw*12);
 
+Point sMouse = new Point();
+Point fMouse = new Point();
+boolean inSwipe = false;
 
-Point[][] point = new Point[3][];
+
+Letter[][] letters = new Letter[3][];
 
 Rect qRect = new Rect(margin, margin + tw*2, margin + tw*12, margin + tw*12);
 char[][] qwerty = {{'q','w','e','r','t','y','u','i','o','p'},
                    {'a','s','d','f','g','h','j','k','l'},
                    {'z','x','c','v','b','n','m'}};
-char[] lettersFull = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
 int selectedScrollRectIndex = 0;
 Rect[] scrollRects = new Rect[23]; // 23 is number of shifts required to go from abcd to wxyz
-int letterScrollWidth = scroll.width() / (scrollRects.length + 2); // +2 instead of -1 to allow double width for 'a' and 'z'
-char[] letters = {'a', 'b', 'c', 'd'};
+
 //You can modify anything in here. This is just a basic implementation.
 
-PriorityQueue<Integer> queue = new PriorityQueue<>(10, Collections.reverseOrder());
-
+//Lines for backspace and space
+Point[] lines = new Point[4];
+PriorityQueue <Letter> minHeap = new PriorityQueue<Letter>(4, new Comparator<Letter>() {
+        public int compare(Letter x, Letter y) {
+          return Float.compare(x.distance, y.distance);
+        }
+});
 
 void setup()
 {
-  point[0] = new Point[10];
-  point[1] = new Point[9];
-  point[2] = new Point[7];
-  for (int i = 0; i < point.length; i++) {
-    for (int j = 0; j < point[i].length; j++) {
-      point[i][j] = new Point(margin + 13 + (i*15) + (j*43), margin + tw*6 + (i*60)); 
+  lines[0] = new Point(margin + tw*12, margin); lines[1] = new Point(margin + tw*12, margin + tw*12);
+  lines[2] = new Point(margin , margin); lines[3] = new Point(margin, margin + tw*12);
+  
+  
+  letters[0] = new Letter[10];
+  letters[1] = new Letter[9];
+  letters[2] = new Letter[7];
+  for (int i = 0; i < letters.length; i++) {
+    for (int j = 0; j < letters[i].length; j++) {
+      letters[i][j] = new Letter();
+      letters[i][j].p = new Point(margin + 13 + (i*15) + (j*43), margin + tw*6 + (i*60));
+      letters[i][j].l = qwerty[i][j];
+      letters[i][j].isActive = true;
     }
   }
   
@@ -67,18 +90,6 @@ void setup()
     rects[i] = new Rect(margin + (tw*3)*i, margin + (tw*2), margin + ((tw*3) * (i+1)), margin + tw*6);
   }
     
-  for (int i = 0; i < scrollRects.length; i++) {
-    if (i == 0) {
-      scrollRects[i] = new Rect(margin, margin + tw*6, margin + letterScrollWidth*2, margin + tw*8);
-    } else if (i == scrollRects.length -1) {
-      // scroll.width() - (int-->float conversion of letterScrollWidth) = 5, which is where that magic number comes from
-      scrollRects[i] = new Rect(margin + letterScrollWidth*(i+1), margin + tw*6, margin + letterScrollWidth*(i+3)+5, margin + tw*8);
-    } else {
-      scrollRects[i] = new Rect(margin + letterScrollWidth*(i+1), margin + tw*6, margin + letterScrollWidth*(i+2), margin + tw*8);
-    }
-    
-   //scrollRects[i] = new Rect(margin + letterScrollWidth*i, margin + tw*6, margin + letterScrollWidth*(i+1), margin + tw*8);
-  }
 
   phrases = loadStrings("phrases2.txt"); //load the phrase set into memory
   Collections.shuffle(Arrays.asList(phrases)); //randomize the order of the phrases
@@ -108,36 +119,20 @@ void drawRect(Rect r, int hex, String input) {
   text(input, (float)r.centerX(), (float)r.centerY()+15); //
 }
 
-void drawScroll(Rect r, int hex) {
-  float xPos = scrollLoc;
-  drawRect(r, hex);
-  
-  // Note: we don't actually need to show this; just for debugging purposes at the moment (although it may be cool to highlight a bar instead of the circle)
-  for (int i = 0; i < scrollRects.length; i++) {
-    if (i == selectedScrollRectIndex) {
-      drawRectNoStroke(scrollRects[i], #FF0000);
-    } else {
-      drawRectNoStroke(scrollRects[i], 255-10*i);
-    }
-  }
-  // keep ellipse within bounds of box
-  //if (scrollLoc > scroll.left + 20 && scrollLoc < scroll.right - 20) xPos = scrollLoc;
-  //if (scrollLoc <= scroll.left) xPos = scroll.left + 20;
-  //else if (scrollLoc >= scroll.right) xPos = scroll.right - 20;
-  //fill(#FF0000);
-  //ellipse((float)xPos, (float)r.centerY(), 40, 40);
-  //for (int i = 0; i < 7; i++) {
-  //  fill(#808080);
-  //  if (i == scrollLoc) fill(#FF0000); 
-  //  ellipse((float)r.left+(tw*12/7) * i + 40, (float)r.centerY(), 20, 20);
-  //}
-}
 
 void drawQwerty() {
   textSize(50);
-  for (int i = 0; i < qwerty.length; i++) {
-    for (int j = 0; j < qwerty[i].length; j++) {
-      text("" + qwerty[i][j], point[i][j].x, point[i][j].y); 
+  for (int i = 0; i < letters.length; i++) {
+    for (int j = 0; j < letters[i].length; j++) {
+      if (letters[i][j].isActive) text("" + letters[i][j].l, letters[i][j].p.x, letters[i][j].p.y); 
+    }
+  }
+}
+
+void setQwertyActive(boolean b) {
+  for (int i = 0; i < letters.length; i++) {
+    for (int j = 0; j < letters[i].length; j++) {
+      letters[i][j].isActive = b;
     }
   }
 }
@@ -192,8 +187,8 @@ void draw()
   
 
     //Draw space and delete
-    drawRect(delete, #FFFFFF, "del");
-    drawRect(space, #FFFFFF, "_");
+    //drawRect(delete, #FFFFFF, "del");
+    //drawRect(space, #FFFFFF, "_");
 
     drawQwerty();
     fill(255, 0, 0);
@@ -208,60 +203,49 @@ boolean didMouseClick(float x, float y, float w, float h) //simple function to d
   return (mouseX > x && mouseX<x+w && mouseY>y && mouseY<y+h); //check to see if it is in button bounds
 }
 
-void scrollPositionChanged()
-{
-  for (int i = 0; i < scrollRects.length; i++)
-  {
-    if (scrollRects[i].contains(mouseX, mouseY))
-    {
-      for (int j = 0; j < 4; j++) {
-        letters[j] = lettersFull[i+j];
-      }
-      selectedScrollRectIndex = i;
-      break;
-    }
-  }
-}
-
 void mousePressed()
 {
-  if (space.contains(mouseX, mouseY)) {
-    currentTyped+=" ";
-  }
-  if (delete.contains(mouseX, mouseY)) {
-    currentTyped = currentTyped.substring(0, currentTyped.length()-1);
-  }
-  
-  /*
-  if (letter1=="_") //if underscore, consider that a space bar
-   
-   else if (letter1=='`' & currentTyped.length()>0) //if `, treat that as a delete command
-   //currentTyped = currentTyped.substring(0, currentTyped.length()-1);
-   else if (letter1!='`') //if not any of the above cases, add the current letter to the typed string
-   currentTyped+=letter1;*/
-
-  //You are allowed to have a next button outside the 2" area
+  sMouse.set(mouseX, mouseY);
+  inSwipe = true;
+ 
   if (didMouseClick(800, 00, 200, 200)) //check if click is in next button
   {
     nextTrial(); //if so, advance to next trial
   }
 }
 
-void mouseReleased() {  
-  int indexI = 0;
-  int indexJ = 0;
+Letter[] top4 = new Letter[4];
+boolean isFull = true;
+void mouseReleased() {
   if (qRect.contains(mouseX, mouseY)) {
-    float distance = Integer.MAX_VALUE;
-    for (int i = 0; i < point.length; i++) {
-      for (int j = 0; j < point[i].length; j++) {
-        if (dist(point[i][j].x, point[i][j].y, mouseX, mouseY) < distance) {
-          distance = dist(point[i][j].x, point[i][j].y,mouseX,mouseY);
-          indexI = i;
-          indexJ = j;
+    if (isFull) {
+      for (int i = 0; i < letters.length; i++) {
+        for (int j = 0; j < letters[i].length; j++) {
+          letters[i][j].distance = dist(letters[i][j].p.x, letters[i][j].p.y, mouseX, mouseY);
+          minHeap.add(letters[i][j]);
         }
       }
+      setQwertyActive(false);
+      for (int i = 0; i < 4; i++) {
+        top4[i] = minHeap.poll();
+        top4[i].isActive = true;
+      }
+      minHeap.clear();
+      isFull = false;
+    } else {
+      int index = 0;
+      Letter l = null;
+      float distance = Integer.MAX_VALUE;
+      for (int i = 0; i < 4; i++) {
+        if (dist(top4[i].p.x, top4[i].p.y, mouseX, mouseY) < distance) {
+          distance = dist(top4[i].p.x, top4[i].p.y,mouseX,mouseY);
+          index = i;
+        }
+      }
+      currentTyped += ""+top4[index].l;
+      setQwertyActive(true);
+      isFull = true;
     }
-    currentTyped += ""+qwerty[indexI][indexJ];
   }
 }
 
@@ -270,36 +254,16 @@ int counter = 0;
 
 void mouseDragged() 
 {
-  if (input.contains(mouseX, mouseY))
-  {
-    
-    scrollPositionChanged();
-    
-    //counter++;
-    //// indicator that user is moving in a particular direction
-    //// pmouseX = previous mouse x
-    //if (counter == 7) {
-    //  counter = 0;
-      
-      
-      
-    //  if (mouseX > pmouseX) //check if click in left button
-    //  {
-    //    for (int i = 0; i < 4; i++) {
-    //      letters[i] = (char((((int)letters[i] + 1 - 97) % 26) + 97));
-    //    }
-    //  }
-
-    //  if (mouseX < pmouseX) //check if click in right button
-    //  {
-    //    for (int i = 0; i < 4; i++) {
-    //      letters[i] = (char((((int)letters[i] - 1 - 97 + 26) % 26) + 97));
-    //    }
-    //  }
-    //}
+  if (inSwipe && (!input.contains(mouseX, mouseY)) && input.contains(sMouse.x, sMouse.y)){
+    fMouse.set(mouseX, mouseY);
+    //Space swipe
+    if (linesIntersect(sMouse.x, sMouse.y, fMouse.x, fMouse.y, lines[0].x, lines[0].y, lines[1].x, lines[1].y)) {
+        currentTyped+=" ";
+    } else if (linesIntersect(sMouse.x, sMouse.y, fMouse.x, fMouse.y, lines[2].x, lines[2].y, lines[3].x, lines[3].y)) {
+        currentTyped = currentTyped.substring(0, currentTyped.length()-1);
+    }
+    inSwipe = false;
   }
-  //scrollLoc = (((int)letters[0] - 97) % 26) / 4;
-  scrollLoc = mouseX;
 }
 
 
@@ -355,6 +319,36 @@ void nextTrial()
   currentPhrase = phrases[currTrialNum]; // load the next phrase!
   //currentPhrase = "abc"; // uncomment this to override the test phrase (useful for debugging)
 }
+
+//Test for intersection
+public static boolean linesIntersect(final int X1, final int Y1, final int X2, final int Y2,
+      final int X3, final int Y3, final int X4, final int Y4) {
+    return ((relativeCCW(X1, Y1, X2, Y2, X3, Y3)
+        * relativeCCW(X1, Y1, X2, Y2, X4, Y4) <= 0) && (relativeCCW(X3,
+            Y3, X4, Y4, X1, Y1)
+            * relativeCCW(X3, Y3, X4, Y4, X2, Y2) <= 0));
+}
+
+  private static int relativeCCW(final int X1, final int Y1, int X2, int Y2, int PX,
+      int PY) {
+    X2 -= X1;
+    Y2 -= Y1;
+    PX -= X1;
+    PY -= Y1;
+    int ccw = PX * Y2 - PY * X2;
+    if (ccw == 0) {
+      ccw = PX * X2 + PY * Y2;
+      if (ccw > 0) {
+        PX -= X2;
+        PY -= Y2;
+        ccw = PX * X2 + PY * Y2;
+        if (ccw < 0) {
+          ccw = 0;
+        }
+      }
+    }
+    return (ccw < 0) ? -1 : ((ccw > 0) ? 1 : 0);
+  }
 
 
 
