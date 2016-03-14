@@ -1,6 +1,8 @@
 import java.util.Arrays;
+import java.util.PriorityQueue;
 import java.util.Collections;
 import android.graphics.Rect;
+import android.graphics.Point;
 
 String[] phrases; //contains all of the phrases
 int totalTrialNum = 4; //the total number of phrases to be tested - set this low for testing. Might be ~10 for the real bakeoff!
@@ -13,7 +15,7 @@ float lettersExpectedTotal = 0; //a running total of the number of letters expec
 float errorsTotal = 0; //a running total of the number of errors (when hitting next)
 String currentPhrase = ""; //the current target phrase
 String currentTyped = ""; //what the user has typed so far
-final int DPIofYourDeviceScreen = 480; //you will need to look up the DPI or PPI of your device to make sure you get the right scale!!
+final int DPIofYourDeviceScreen = 424; //you will need to look up the DPI or PPI of your device to make sure you get the right scale!!
 //http://en.wikipedia.org/wiki/List_of_displays_by_pixel_density
 final int sizeOfInputArea = DPIofYourDeviceScreen*1; //aka, 1.0 inches square!
 final int tw = sizeOfInputArea/12; //Used because fractions confuse me
@@ -24,6 +26,7 @@ Rect input = new Rect(margin, margin, margin + tw*12, margin + tw*12);
 Rect delete = new Rect(margin, margin, margin + tw*6, margin + tw * 2);
 Rect space = new Rect(margin + tw * 6, margin, margin + tw * 12, margin + tw * 2);
 
+
 Rect[] rects = new Rect[4];
 Rect scroll = new Rect(margin, margin + tw*6, margin + tw*12, margin + tw*8);
 
@@ -32,14 +35,34 @@ Rect auto1 = new Rect(margin + tw*6, margin + tw*8, margin + tw*12, margin +tw*1
 Rect auto2 = new Rect(margin, margin + tw*10, margin + tw * 6, margin + tw*12);
 Rect auto3 = new Rect(margin + tw*6, margin + tw*10, margin + tw*6, margin + tw*12);
 
+
+Point[][] point = new Point[3][];
+
+Rect qRect = new Rect(margin, margin + tw*2, margin + tw*12, margin + tw*12);
+char[][] qwerty = {{'q','w','e','r','t','y','u','i','o','p'},
+                   {'a','s','d','f','g','h','j','k','l'},
+                   {'z','x','c','v','b','n','m'}};
 char[] lettersFull = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
 int selectedScrollRectIndex = 0;
 Rect[] scrollRects = new Rect[23]; // 23 is number of shifts required to go from abcd to wxyz
 int letterScrollWidth = scroll.width() / (scrollRects.length + 2); // +2 instead of -1 to allow double width for 'a' and 'z'
 char[] letters = {'a', 'b', 'c', 'd'};
 //You can modify anything in here. This is just a basic implementation.
+
+PriorityQueue<Integer> queue = new PriorityQueue<>(10, Collections.reverseOrder());
+
+
 void setup()
 {
+  point[0] = new Point[10];
+  point[1] = new Point[9];
+  point[2] = new Point[7];
+  for (int i = 0; i < point.length; i++) {
+    for (int j = 0; j < point[i].length; j++) {
+      point[i][j] = new Point(margin + 13 + (i*15) + (j*43), margin + tw*6 + (i*60)); 
+    }
+  }
+  
   for (int i = 0; i < 4; i++) {
     rects[i] = new Rect(margin + (tw*3)*i, margin + (tw*2), margin + ((tw*3) * (i+1)), margin + tw*6);
   }
@@ -110,6 +133,15 @@ void drawScroll(Rect r, int hex) {
   //}
 }
 
+void drawQwerty() {
+  textSize(50);
+  for (int i = 0; i < qwerty.length; i++) {
+    for (int j = 0; j < qwerty[i].length; j++) {
+      text("" + qwerty[i][j], point[i][j].x, point[i][j].y); 
+    }
+  }
+}
+
 //You can modify anything in here. This is just a basic implementation.
 void draw()
 {
@@ -117,7 +149,7 @@ void draw()
 
   // image(watch,-200,200);
   drawRect(input, #808080); //input area should be 2" by 2"
-  
+  textSize(30);
   
 
   if (finishTime!=0)
@@ -156,25 +188,14 @@ void draw()
 
 
     //my draw code
-
-    textSize(70);
     textAlign(CENTER);
-    //Draw letters
-    for (int i = 0; i < 4; i++) {
-      drawRect(rects[i], #FFFFFF, ""+letters[i]);
-    }
+  
 
     //Draw space and delete
     drawRect(delete, #FFFFFF, "del");
     drawRect(space, #FFFFFF, "_");
-    textSize(30);
-    //Draw scroll bar
-    drawScroll(scroll, #FFFFFF);
-    textSize(35);
-    text("QWERTYUIOP", 440, scroll.top + 50);
-    text("ASDFGHJKL", 460, scroll.top + 100);
-    text("ZXCVBNM", 480, scroll.top + 150);
-    
+
+    drawQwerty();
     fill(255, 0, 0);
     //rect(200, 200, sizeOfInputArea/2, sizeOfInputArea/2); //draw left red button
     fill(0, 255, 0);
@@ -204,17 +225,12 @@ void scrollPositionChanged()
 
 void mousePressed()
 {
-  for (int i = 0; i < 4; i++) {
-    if (rects[i].contains(mouseX, mouseY)) currentTyped += letters[i];
-  }
   if (space.contains(mouseX, mouseY)) {
     currentTyped+=" ";
   }
   if (delete.contains(mouseX, mouseY)) {
     currentTyped = currentTyped.substring(0, currentTyped.length()-1);
   }
-  
-  scrollPositionChanged();
   
   /*
   if (letter1=="_") //if underscore, consider that a space bar
@@ -230,6 +246,25 @@ void mousePressed()
     nextTrial(); //if so, advance to next trial
   }
 }
+
+void mouseReleased() {  
+  int indexI = 0;
+  int indexJ = 0;
+  if (qRect.contains(mouseX, mouseY)) {
+    float distance = Integer.MAX_VALUE;
+    for (int i = 0; i < point.length; i++) {
+      for (int j = 0; j < point[i].length; j++) {
+        if (dist(point[i][j].x, point[i][j].y, mouseX, mouseY) < distance) {
+          distance = dist(point[i][j].x, point[i][j].y,mouseX,mouseY);
+          indexI = i;
+          indexJ = j;
+        }
+      }
+    }
+    currentTyped += ""+qwerty[indexI][indexJ];
+  }
+}
+
 
 int counter = 0;
 
