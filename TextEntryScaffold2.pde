@@ -1,5 +1,5 @@
 import java.util.Arrays;
-import java.util.PriorityQueue;
+import java.util.Map;
 import java.util.Collections;
 import java.util.LinkedList;
 import android.graphics.Rect;
@@ -74,8 +74,42 @@ Rect[] scrollRects = new Rect[23]; // 23 is number of shifts required to go from
 //Lines for backspace and space
 Point[] lines = new Point[4];
 
+Map<String, float[]> commonLetters = new HashMap<String, float[]>();
+
 void setup()
 {
+   // can't map char as key, so need to cast when checking previous letter
+  commonLetters.put(" ", new float[] {});
+  commonLetters.put("a", new float[] {});
+  commonLetters.put("c", new float[] {});
+  commonLetters.put("b", new float[] {});
+  commonLetters.put("e", new float[] {});
+  commonLetters.put("d", new float[] {});
+  commonLetters.put("g", new float[] {});
+  commonLetters.put("f", new float[] {});
+  commonLetters.put("i", new float[] {});
+  commonLetters.put("h", new float[] {});
+  commonLetters.put("k", new float[] {});
+  commonLetters.put("j", new float[] {});
+  commonLetters.put("m", new float[] {});
+  commonLetters.put("l", new float[] {});
+  commonLetters.put("o", new float[] {});
+  commonLetters.put("n", new float[] {});
+  commonLetters.put("q", new float[] {});
+  commonLetters.put("p", new float[] {});
+  commonLetters.put("s", new float[] {});
+  commonLetters.put("r", new float[] {});
+  commonLetters.put("u", new float[] {});
+  commonLetters.put("t", new float[] {});
+  commonLetters.put("w", new float[] {});
+  commonLetters.put("v", new float[] {});
+  commonLetters.put("y", new float[] {});
+  commonLetters.put("x", new float[] {});
+  commonLetters.put("z", new float[] {});
+  
+  
+  
+  
   lines[0] = new Point(margin + tw*12, margin); lines[1] = new Point(margin + tw*12, margin + tw*12);
   lines[2] = new Point(margin , margin); lines[3] = new Point(margin, margin + tw*12);
   
@@ -253,8 +287,13 @@ void mousePressed()
   }
 }
 
+boolean started = false;
 void mouseReleased() {
   inSwipe = false;
+  if (!started) {
+    started = true;
+    return;
+  }
   if (qRect.contains(mouseX, mouseY)) {
     currentTyped += ""+closest.l;  
   }
@@ -272,7 +311,7 @@ void mouseDragged()
     if (linesIntersect(sMouse.x, sMouse.y, fMouse.x, fMouse.y, lines[0].x, lines[0].y, lines[1].x, lines[1].y)) {
         currentTyped+=" ";
     } else if (linesIntersect(sMouse.x, sMouse.y, fMouse.x, fMouse.y, lines[2].x, lines[2].y, lines[3].x, lines[3].y)) {
-        currentTyped = currentTyped.substring(0, currentTyped.length()-1);
+        if (currentTyped.length() > 0) currentTyped = currentTyped.substring(0, currentTyped.length()-1);
     }
     inSwipe = false;
   }
@@ -281,9 +320,16 @@ void mouseDragged()
       float distance = Integer.MAX_VALUE;
       for (int i = 0; i < letters.length; i++) {
         for (int j = 0; j < letters[i].length; j++) {
+          float distOff = 0;
+   
           letters[i][j].distance = dist(letters[i][j].p.x, letters[i][j].p.y, mouseX, mouseY);
           //Find letters within range 
           if (letters[i][j].distance < ellipseRad/3){
+            if (currentTyped.length() > 0) {
+            char[] mostCommon = commonLetters.get("" + currentTyped.charAt(currentTyped.length()-1));
+            distOff += (26 - new String(mostCommon).indexOf(letters[i][j].l))/26f * (ellipseRad/4);
+            letters[i][j].distance -= distOff;
+            }
             neighbors.add(letters[i][j]);
           }
           //Find closest letter
