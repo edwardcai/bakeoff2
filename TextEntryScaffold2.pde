@@ -325,11 +325,11 @@ void mouseDragged()
           letters[i][j].distance = dist(letters[i][j].p.x, letters[i][j].p.y, mouseX, mouseY);
           //Find letters within range 
           if (letters[i][j].distance < ellipseRad/3){
-            if (currentTyped.length() > 0) {
-            char[] mostCommon = commonLetters.get("" + currentTyped.charAt(currentTyped.length()-1));
-            distOff += (26 - new String(mostCommon).indexOf(letters[i][j].l))/26f * (ellipseRad/4);
-            letters[i][j].distance -= distOff;
-            }
+            //if (currentTyped.length() > 0) {
+            //char[] mostCommon = commonLetters.get("" + currentTyped.charAt(currentTyped.length()-1));
+            //distOff += (26 - new String(mostCommon).indexOf(letters[i][j].l))/26f * (ellipseRad/4);
+            //letters[i][j].distance -= distOff;
+            //}
             neighbors.add(letters[i][j]);
           }
           //Find closest letter
