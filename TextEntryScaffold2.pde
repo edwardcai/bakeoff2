@@ -303,7 +303,7 @@ void mouseReleased() {
 LinkedList<Letter> neighbors = new LinkedList<Letter>();
 Letter closest = null;
 
-void mouseDragged(
+void mouseDragged() 
 {
   if (inSwipe && (!input.contains(mouseX, mouseY)) && input.contains(sMouse.x, sMouse.y)){
     fMouse.set(mouseX, mouseY);
