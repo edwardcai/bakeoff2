@@ -1,6 +1,7 @@
 import java.util.Arrays;
 import java.util.PriorityQueue;
 import java.util.Collections;
+import java.util.LinkedList;
 import android.graphics.Rect;
 import android.graphics.Point;
 import java.util.Comparator;
@@ -22,6 +23,9 @@ final int sizeOfInputArea = DPIofYourDeviceScreen*1; //aka, 1.0 inches square!
 final int tw = sizeOfInputArea/12; //Used because fractions confuse me
 final int margin = 200;
 
+final int ellipseRad = tw*6;
+final int ellipseVert = tw*5;
+
 int scrollLoc = 0;
 Rect input = new Rect(margin, margin, margin + tw*12, margin + tw*12);
 Rect delete = new Rect(margin, margin, margin + tw*6, margin + tw * 2);
@@ -35,8 +39,13 @@ public class Letter{
   
 }
 
+//So that the ellipse doesn't go off screen. silly processing
+Rect black1 = new Rect(0, 0, 1080, margin);
+Rect black2 = new Rect(0, 0, margin, 1920);
+Rect black3 = new Rect(margin + tw*12, 0, 1080, 1920);
+Rect black4 = new Rect(0, margin + tw*12, 1080, 1920);
 
-Point circle = new Point(0,0);
+
 
 Rect[] rects = new Rect[4];
 Rect scroll = new Rect(margin, margin + tw*6, margin + tw*12, margin + tw*8);
@@ -53,7 +62,7 @@ boolean inSwipe = false;
 
 Letter[][] letters = new Letter[3][];
 
-Rect qRect = new Rect(margin, margin + tw*2, margin + tw*12, margin + tw*12);
+Rect qRect = new Rect(margin, margin + tw*6, margin + tw*12, margin + tw*12);
 char[][] qwerty = {{'q','w','e','r','t','y','u','i','o','p'},
                    {'a','s','d','f','g','h','j','k','l'},
                    {'z','x','c','v','b','n','m'}};
@@ -64,11 +73,6 @@ Rect[] scrollRects = new Rect[23]; // 23 is number of shifts required to go from
 
 //Lines for backspace and space
 Point[] lines = new Point[4];
-PriorityQueue <Letter> minHeap = new PriorityQueue<Letter>(4, new Comparator<Letter>() {
-        public int compare(Letter x, Letter y) {
-          return Float.compare(x.distance, y.distance);
-        }
-});
 
 void setup()
 {
@@ -82,7 +86,7 @@ void setup()
   for (int i = 0; i < letters.length; i++) {
     for (int j = 0; j < letters[i].length; j++) {
       letters[i][j] = new Letter();
-      letters[i][j].p = new Point(margin + 13 + (i*15) + (j*43), margin + tw*6 + (i*60));
+      letters[i][j].p = new Point(margin + 13 + (i*15) + (j*43), margin + tw*7 + (tw/2) + (i*60));
       letters[i][j].l = qwerty[i][j];
       letters[i][j].isActive = true;
     }
@@ -123,12 +127,27 @@ void drawRect(Rect r, int hex, String input) {
 
 
 void drawQwerty() {
+  fill(0);
   textSize(50);
   for (int i = 0; i < letters.length; i++) {
     for (int j = 0; j < letters[i].length; j++) {
       if (letters[i][j].isActive) text("" + letters[i][j].l, letters[i][j].p.x, letters[i][j].p.y); 
     }
   }
+}
+
+void drawEllipse() {
+  fill(200);
+  ellipse(mouseX, mouseY - ellipseVert, ellipseRad, ellipseRad);
+  fill(255);
+  ellipse(mouseX, mouseY - ellipseVert, ellipseRad/3, ellipseRad/3);
+  fill(50);
+  textSize(60);
+  for (Letter n : neighbors) {
+    text("" + n.l, (n.p.x), 0 - ellipseVert + (n.p.y));  
+  }
+  fill(255,0,0);
+  text("" + closest.l, closest.p.x , closest.p.y - ellipseVert);
 }
 
 void setQwertyActive(boolean b) {
@@ -138,14 +157,14 @@ void setQwertyActive(boolean b) {
     }
   }
 }
-
+int counter = 0;
 //You can modify anything in here. This is just a basic implementation.
 void draw()
 {
+  counter++;
   background(0); //clear background
-
   // image(watch,-200,200);
-  drawRect(input, #808080); //input area should be 2" by 2"
+  drawRect(input, #d3d3d3); //input area should be 2" by 2"
   textSize(30);
   
 
@@ -171,35 +190,34 @@ void draw()
 
   if (startTime!=0)
   {
+    //my draw code
+    textAlign(CENTER,CENTER);
+    drawQwerty();
+    if (qRect.contains(mouseX, mouseY) && inSwipe) drawEllipse();
+    drawRect(black1,0);drawRect(black2,0);drawRect(black3,0);drawRect(black4,0);
     //you will need something like the next 10 lines in your code. Output does not have to be within the 2 inch area!
+    textSize(30);
     textAlign(LEFT); //align the text left
     fill(128);
     text("Phrase " + (currTrialNum+1) + " of " + totalTrialNum, 70, 50); //draw the trial count
     fill(255);
     text("Target:   " + currentPhrase, 70, 100); //draw the target string
-    text("Entered:  " + currentTyped, 70, 140); //draw what the user has entered thus far 
+    if (counter < 15) {
+      text("Entered:  " + currentTyped, 70, 140); //draw what the user has entered thus far
+    } else {
+      text("Entered:  " + currentTyped + "|", 70, 140);
+      counter = 0;
+      if (counter == 70) counter = 0;
+    }
     fill(255, 0, 0);
     rect(800, 00, 200, 200); //drag next button
     fill(255);
     text("NEXT > ", 850, 100); //draw next label
 
 
-    //my draw code
-    textAlign(CENTER);
-  
-
-    //Draw space and delete
-    //drawRect(delete, #FFFFFF, "del");
-    //drawRect(space, #FFFFFF, "_");
-
-    drawQwerty();
-    fill(255, 0, 0);
-    //rect(200, 200, sizeOfInputArea/2, sizeOfInputArea/2); //draw left red button
-    fill(0, 255, 0);
-    //rect(200+sizeOfInputArea/2, 200, sizeOfInputArea/2, sizeOfInputArea/2); //draw right green button
+   
   }
   
-  if (inSwipe) ellipse(mouseX, mouseY - tw*4, tw*4, tw*4);
 }
 
 boolean didMouseClick(float x, float y, float w, float h) //simple function to do hit testing
@@ -211,33 +229,40 @@ void mousePressed()
 {
   sMouse.set(mouseX, mouseY);
   inSwipe = true;
- 
+  if (qRect.contains(mouseX, mouseY)) {
+      neighbors.clear();
+      float distance = Integer.MAX_VALUE;
+      for (int i = 0; i < letters.length; i++) {
+        for (int j = 0; j < letters[i].length; j++) {
+          letters[i][j].distance = dist(letters[i][j].p.x, letters[i][j].p.y, mouseX, mouseY);
+          //Find letters within range 
+          if (letters[i][j].distance < ellipseRad/3){
+            neighbors.add(letters[i][j]);
+          }
+          //Find closest letter
+          if (letters[i][j].distance < distance) {
+            closest = letters[i][j];
+            distance = letters[i][j].distance;
+          }
+        }
+      }
+  }
   if (didMouseClick(800, 00, 200, 200)) //check if click is in next button
   {
     nextTrial(); //if so, advance to next trial
   }
 }
 
-Letter[] top4 = new Letter[4];
 void mouseReleased() {
+  inSwipe = false;
   if (qRect.contains(mouseX, mouseY)) {
-      for (int i = 0; i < letters.length; i++) {
-        for (int j = 0; j < letters[i].length; j++) {
-          letters[i][j].distance = dist(letters[i][j].p.x, letters[i][j].p.y, mouseX, mouseY);
-          minHeap.add(letters[i][j]);
-        }
-      }
-      setQwertyActive(false);
-      for (int i = 0; i < 4; i++) {
-        top4[i] = minHeap.poll();
-        top4[i].isActive = true;
-      }
-      minHeap.clear();
+    currentTyped += ""+closest.l;  
   }
 }
 
 
-int counter = 0;
+LinkedList<Letter> neighbors = new LinkedList<Letter>();
+Letter closest = null;
 
 void mouseDragged() 
 {
@@ -250,6 +275,24 @@ void mouseDragged()
         currentTyped = currentTyped.substring(0, currentTyped.length()-1);
     }
     inSwipe = false;
+  }
+  if (qRect.contains(mouseX, mouseY)) {
+      neighbors.clear();
+      float distance = Integer.MAX_VALUE;
+      for (int i = 0; i < letters.length; i++) {
+        for (int j = 0; j < letters[i].length; j++) {
+          letters[i][j].distance = dist(letters[i][j].p.x, letters[i][j].p.y, mouseX, mouseY);
+          //Find letters within range 
+          if (letters[i][j].distance < ellipseRad/3){
+            neighbors.add(letters[i][j]);
+          }
+          //Find closest letter
+          if (letters[i][j].distance < distance) {
+            closest = letters[i][j];
+            distance = letters[i][j].distance;
+          }
+        }
+      }
   }
 }
 
